@@ -3,6 +3,7 @@ package mbs
 import (
 	"context"
 	"fmt"
+	"time"
 
 	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -25,7 +26,7 @@ func (s *BatchStore) GetBatch(ctx context.Context, id string) (*batchstore.Execu
 	var rec batchstore.ExecuteBatchRecord
 	err := s.batches.FindOne(
 		ctx,
-		bson.D{{"id", id}},
+		bson.M{"id": id},
 	).Decode(&rec)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve batch: %w", err)
@@ -36,10 +37,13 @@ func (s *BatchStore) GetBatch(ctx context.Context, id string) (*batchstore.Execu
 
 func (s *BatchStore) UpdateBatch(ctx context.Context, rec *batchstore.ExecuteBatchRecord) error {
 
+	// modding input record
+	rec.UpdatedAt = time.Now().UTC()
+
 	_, err := s.batches.UpdateOne(
 		ctx,
-		bson.D{{"id", rec.ID}},
-		bson.D{{"$set", rec}},
+		bson.M{"id": rec.ID},
+		bson.M{"$set": rec},
 	)
 	if err != nil {
 		return fmt.Errorf("could not update batch: %w", err)
@@ -52,10 +56,11 @@ func (s *BatchStore) UpdateBatchStatus(ctx context.Context, status int32, id str
 
 	_, err := s.batches.UpdateOne(
 		ctx,
-		bson.D{{"id", id}},
-		bson.D{{"$set",
-			bson.D{{"status", status}}},
-		},
+		bson.M{"id": id},
+		bson.M{"$set": bson.M{
+			"status":     status,
+			"updated_at": time.Now().UTC(),
+		}},
 	)
 	if err != nil {
 		return fmt.Errorf("could not update batch status: %w", err)
@@ -68,7 +73,7 @@ func (s *BatchStore) DeleteBatch(ctx context.Context, id string) error {
 
 	_, err := s.batches.DeleteOne(
 		ctx,
-		bson.D{{"id", id}},
+		bson.M{"id": id},
 	)
 	if err != nil {
 		return fmt.Errorf("could not delete batch: %w", err)

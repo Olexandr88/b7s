@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -39,6 +40,9 @@ func (s *BatchStore) GetBatchChunks(ctx context.Context, batchID string) ([]*bat
 
 func (s *BatchStore) UpdateChunk(ctx context.Context, rec *batchstore.ChunkRecord) error {
 
+	// modding input record
+	rec.UpdatedAt = time.Now().UTC()
+
 	_, err := s.chunks.UpdateOne(
 		ctx,
 		bson.M{"id": rec.ID},
@@ -56,7 +60,10 @@ func (s *BatchStore) UpdateChunkStatus(ctx context.Context, status int32, ids ..
 	_, err := s.chunks.UpdateMany(
 		ctx,
 		bson.M{"id": bson.M{"$in": ids}},
-		bson.M{"$set": bson.M{"status": status}},
+		bson.M{"$set": bson.M{
+			"status":     status,
+			"updated_at": time.Now().UTC(),
+		}},
 	)
 	if err != nil {
 		return fmt.Errorf("could not update chunk: %w", err)
