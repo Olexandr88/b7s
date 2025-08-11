@@ -296,3 +296,19 @@ func (s *BatchStore) FindWorkItems(ctx context.Context, batchID string, chunkID 
 
 	return results, nil
 }
+
+// func (s *BatchStore) dumpData(w io.Writer, msg string) {
+// 	s.RLock()
+// 	defer s.RUnlock()
+//
+// 	rec := map[string]any{
+// 		"msg":        msg,
+// 		"batches":    s.batches,
+// 		"chunks":     s.chunks,
+// 		"work_items": s.items,
+// 	}
+//
+// 	data, _ := json.MarshalIndent(rec, "", "\t")
+//
+// 	fmt.Fprintf(w, "%s\n", data)
+// }

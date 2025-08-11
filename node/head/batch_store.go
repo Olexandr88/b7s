@@ -81,11 +81,13 @@ func (h *HeadNode) createChunks(batchID string, assignments map[peer.ID]*request
 
 func (h *HeadNode) updateWorkOrderAssignments(batchID string, assignments map[peer.ID]*request.WorkOrderBatch) error {
 
+	// TODO: Count how many times we calculate execution ID - this is all hashing and could be costly.
+
 	for peer, chunk := range assignments {
 
 		ids := make([]string, len(chunk.Arguments))
 		for i, args := range chunk.Arguments {
-			ids[i] = string(execute.ExecutionID(chunk.Template.FunctionID, chunk.Template.Method, args))
+			ids[i] = workItemID(batchID, string(execute.ExecutionID(chunk.Template.FunctionID, chunk.Template.Method, args)))
 		}
 
 		// NOTE: Potentially inefficient - one query per chunk.

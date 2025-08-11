@@ -117,7 +117,7 @@ func (h *HeadNode) executeBatch(
 	}
 
 	// TODO: Rethink, useful but ugly.
-	logAssignments(&log, assignments)
+	// logAssignments(&log, assignments)
 
 	var failedDeliveries []peer.ID
 	err = h.sendBatch(ctx, assignments)

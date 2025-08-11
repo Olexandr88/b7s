@@ -95,10 +95,10 @@ func createHeadNode(ctx context.Context, core node.Core, cfg *config.Config) (No
 		log.Info().Msg("initialized mongo batch server")
 
 		opts = append(opts, head.BatchStore(bs))
+	}
 
-		if cfg.Head.Batch.RequeueInterval > 0 {
-			opts = append(opts, head.BatchRequeueInterval(cfg.Head.Batch.RequeueInterval))
-		}
+	if cfg.Head.Batch.RequeueInterval > 0 {
+		opts = append(opts, head.BatchRequeueInterval(cfg.Head.Batch.RequeueInterval))
 	}
 
 	head, err := head.New(core, opts...)
