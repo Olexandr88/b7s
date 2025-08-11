@@ -140,17 +140,15 @@ func (h *HeadNode) executeBatch(
 
 	assignedWorkers := mapKeys(assignments)
 
-	waitctx, cancel := context.WithTimeout(ctx, h.cfg.ExecutionTimeout)
+	wctx, cancel := context.WithTimeout(ctx, h.cfg.ExecutionTimeout)
 	defer cancel()
 
-	keyfunc := func(id peer.ID) string {
-		return peerChunkKey(requestID, assignments[id].ChunkID, id)
-	}
-
 	batchResults := gatherPeerMessages(
-		waitctx,
+		wctx,
 		assignedWorkers,
-		keyfunc,
+		func(id peer.ID) string {
+			return peerChunkKey(requestID, assignments[id].ChunkID, id)
+		},
 		h.workOrderBatchResponses,
 	)
 
@@ -222,9 +220,7 @@ func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore
 
 	requestID := batch.ID
 
-	log := h.Log().With().
-		Str("batch", batch.ID).
-		Logger()
+	log := h.Log().With().Str("batch", batch.ID).Logger()
 
 	log.Info().Msg("continuing batch execution")
 
@@ -245,9 +241,7 @@ func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore
 	if len(permaFailed) > 0 {
 		go func(ctx context.Context) {
 
-			h.Log().Info().
-				Str("batch", requestID).
-				Int("count", len(permaFailed)).
+			h.Log().Info().Str("batch", requestID).Int("count", len(permaFailed)).
 				Msg("marking work items as permanently failed")
 
 			formatWorkRecordIDs := func(items []*batchstore.WorkItemRecord) []string {
@@ -268,19 +262,15 @@ func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore
 
 	if len(pending) == 0 {
 
-		h.Log().Info().
-			Str("batch", requestID).
+		h.Log().Info().Str("batch", requestID).
 			Msg("no pending work items - marking batch as done")
 
 		return h.cfg.BatchStore.UpdateBatchStatus(ctx, batchstore.StatusDone, requestID)
 	}
 
-	h.Log().Info().
-		Str("batch", requestID).
-		Int("pending", len(pending)).
+	h.Log().Info().Str("batch", requestID).Int("pending", len(pending)).
 		Msg("requeuing batch work items")
 
-	// TODO: Do we need the return value?
 	_, err = h.executeBatch(ctx, requestID, batchRecordToRequest(batch, pending))
 	if err != nil {
 		return fmt.Errorf("could not continue batch execution: %w", err)

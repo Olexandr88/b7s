@@ -229,6 +229,9 @@ func (h *HeadNode) processWorkOrderBatchResponse(ctx context.Context, from peer.
 	key := peerChunkKey(res.RequestID, res.ChunkID, from)
 	h.workOrderBatchResponses.Set(key, res)
 
+	// TODO: If batch execution is not currently ongoing, handle it out of band (update DB and all of that).
+	// Perhaps on batch resume, node should first check the batch response cache and update the status for those work items.
+
 	return nil
 }
 

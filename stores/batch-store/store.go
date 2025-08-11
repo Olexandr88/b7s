@@ -20,8 +20,6 @@ type Store interface {
 	WorkItemStore
 }
 
-// TODO: Use multiples instead of singles.
-
 type BatchStore interface {
 	CreateBatch(ctx context.Context, rec *ExecuteBatchRecord) error
 	GetBatch(ctx context.Context, id string) (*ExecuteBatchRecord, error)

@@ -66,17 +66,15 @@ func (h *HeadNode) Run(ctx context.Context) error {
 	// TODO: Re-read this.
 	go func(ctx context.Context) {
 
-		// NOTE: Not a perfect solution, but the simplest one:
-		// Wait a little while until some of the peers connect.
-		// Else we can wait until we get some threshold N of connected peers.
-		// TODO: Double check this decision.
+		// Not a perfect solution, but the simplest one - wait a little while
+		// until some of the peers connect.
 		time.Sleep(batchResumeDelay)
 
 		// Run first sync immediately.
 		err := h.resumeUnfinishedBatches(ctx)
 		if err != nil {
-			h.Log().Error().
-				Err(err).Msg("could not resume incomplete batches")
+			h.Log().Error().Err(err).
+				Msg("could not resume incomplete batches")
 		}
 
 		ticker := time.NewTicker(h.cfg.RequeueInterval)
@@ -88,8 +86,7 @@ func (h *HeadNode) Run(ctx context.Context) error {
 
 				err := h.resumeUnfinishedBatches(ctx)
 				if err != nil {
-					h.Log().Error().
-						Err(err).
+					h.Log().Error().Err(err).
 						Msg("could not resume incomplete batches")
 				}
 
@@ -109,19 +106,18 @@ func (h *HeadNode) resumeUnfinishedBatches(ctx context.Context) error {
 		return fmt.Errorf("could not lookup incomplete batches: %w", err)
 	}
 
-	h.Log().Info().
-		Int("count", len(batches)).
+	h.Log().Info().Int("count", len(batches)).
 		Msg("found unfinished batches")
 
-	// TODO: Decide - process batches sequentially? In parallel?
+	// NOTE: Batches are processed sequentially. Potentially this could be done in parallel.
 	for _, batch := range batches {
 
 		err = h.continueBatchExecution(ctx, batch)
 		if err != nil {
-			h.Log().Error().
-				Err(err).
-				Str("batch", batch.ID).
+			h.Log().Error().Str("batch", batch.ID).Err(err).
 				Msg("countinued batch execution failed")
+
+			continue
 		}
 	}
 
