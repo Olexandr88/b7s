@@ -55,7 +55,6 @@ func (h *HeadNode) processExecuteBatch(ctx context.Context, from peer.ID, req re
 
 	log.Info().Any("results", results).Msg("received batch responses")
 
-	// TODO: Add actual status code.
 	res := req.Response(codes.OK, requestID).WithResults(results)
 
 	err = h.Send(ctx, from, res)
@@ -104,8 +103,6 @@ func (h *HeadNode) executeBatch(
 		Msg("peers reported for work")
 
 	assignments := partitionWorkBatch(peers, requestID, req)
-
-	// TODO: Perhaps we don't do this at all before chunks are actually sent?
 
 	// XXX:
 	// 1. create chunks in the DB
