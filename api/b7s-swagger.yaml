@@ -158,9 +158,18 @@ components:
           example: hello-world.wasm
           description: Name of the WASM file to execute
           x-go-type-skip-optional-pointer: true
-        parameters:
+        arguments:
           type: array
           description: CLI arguments for the Bless Function
+          items:
+            type: string
+          example:
+            - [ "--arg", "first-invocation-argument",  "other arguments..." ]
+          x-go-type-skip-optional-pointer: true
+        parameters:
+          type: array
+          description: Deprecated - use the `arguments` field.
+          deprecated: true 
           items:
             $ref: '#/components/schemas/ExecutionParameter'
           example: 

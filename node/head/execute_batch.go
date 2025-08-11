@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/rs/zerolog"
 
 	"github.com/blessnetwork/b7s/models/bls"
 	"github.com/blessnetwork/b7s/models/codes"
@@ -116,7 +115,7 @@ func (h *HeadNode) executeBatch(
 		return nil, fmt.Errorf("could not save chunks: %w", err)
 	}
 
-	// TODO: Rethink, useful but ugly.
+	// Useful but ugly, won't use it in normal operation unless it proves to be required.
 	// logAssignments(&log, assignments)
 
 	var failedDeliveries []peer.ID
@@ -203,23 +202,23 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 	return keys
 }
 
-func logAssignments(log *zerolog.Logger, assignments map[peer.ID]*request.WorkOrderBatch) {
-
-	for peer, assignment := range assignments {
-		log.Debug().
-			Stringer("peer", peer).
-			Int("count", len(assignment.Arguments)).
-			Msg("work batch prepared for a peer")
-
-		for i, args := range assignment.Arguments {
-			log.Debug().
-				Stringer("peer", peer).
-				Int("i", i).
-				Strs("arguments", args).
-				Msg("work order variant")
-		}
-	}
-}
+// func logAssignments(log *zerolog.Logger, assignments map[peer.ID]*request.WorkOrderBatch) {
+//
+// 	for peer, assignment := range assignments {
+// 		log.Debug().
+// 			Stringer("peer", peer).
+// 			Int("count", len(assignment.Arguments)).
+// 			Msg("work batch prepared for a peer")
+//
+// 		for i, args := range assignment.Arguments {
+// 			log.Debug().
+// 				Stringer("peer", peer).
+// 				Int("i", i).
+// 				Strs("arguments", args).
+// 				Msg("work order variant")
+// 		}
+// 	}
+// }
 
 // Collect any work items for the batch that have not been executed yet and start their execution again.
 func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore.ExecuteBatchRecord) error {
