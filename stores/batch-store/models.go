@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/blessnetwork/b7s/models/execute"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-// TODO: Perhaps this all goes out the window and we just use the request.* types and all of that?
 // TODO: Consider: ID string to UUID
 
 type ExecuteBatchRecord struct {
@@ -26,6 +26,7 @@ type Config = execute.Config
 type ChunkRecord struct {
 	ID        string    `bson:"id,omitempty"`
 	BatchID   string    `bson:"batch_id,omitempty"`
+	Worker    peer.ID   `bson:"worker,omitempty"`
 	Status    int32     `bson:"status"`
 	CreatedAt time.Time `bson:"created_at,omitempty"`
 	UpdatedAt time.Time `bson:"updated_at,omitempty"`
@@ -33,11 +34,12 @@ type ChunkRecord struct {
 
 type WorkItemRecord struct {
 	ID        string    `bson:"id,omitempty"`
-	BatchID   string    `bson:"batch_id,omitempty"` // TODO: Check - is it necessary? Might be good to have locality of data
+	BatchID   string    `bson:"batch_id,omitempty"` // Technically not mandatory here, but is good to have locality of data.
 	ChunkID   string    `bson:"chunk_id,omitempty"`
 	Arguments []string  `bson:"arguments,omitempty"`
 	Status    int32     `bson:"status"`
 	Attempts  uint32    `bson:"attempts,omitempty"`
+	Output    string    `bson:"output,omitempty"`
 	CreatedAt time.Time `bson:"created_at,omitempty"`
 	UpdatedAt time.Time `bson:"updated_at,omitempty"`
 }

@@ -65,10 +65,11 @@ func (h *HeadNode) createChunks(batchID string, assignments map[peer.ID]*request
 	chunks := make([]*batchstore.ChunkRecord, len(assignments))
 
 	i := 0
-	for _, chunk := range assignments {
+	for peer, chunk := range assignments {
 		chunks[i] = &batchstore.ChunkRecord{
 			ID:        chunk.ChunkID,
 			BatchID:   batchID,
+			Worker:    peer,
 			Status:    batchstore.StatusCreated,
 			CreatedAt: ts,
 		}
@@ -150,8 +151,6 @@ func (h *HeadNode) markStartedChunks(batchID string, assignments map[peer.ID]*re
 }
 
 func (h *HeadNode) markCompletedChunks(batchID string, sizes map[string]int, chunkResults map[string]response.NodeChunkResults) error {
-
-	// TODO: Mark chunk as complete if we have responses for all work items in that chunk.
 
 	// Group resulting work items by status so we can update them in batches.
 	completed := make([]string, 0, len(chunkResults))

@@ -24,12 +24,20 @@ func BaselineNode(t *testing.T) *APINode {
 	node := APINode{
 		ExecuteFunctionFunc: func(context.Context, execute.Request, string) (codes.Code, string, execute.ResultMap, execute.Cluster, error) {
 
-			// TODO: Add a generic cluster info
-			return GenericExecutionResult.Code, GenericUUID.String(), GenericExecutionResultMap, execute.Cluster{}, nil
+			var (
+				code    = GenericExecutionResult.Code
+				uuid    = GenericUUID.String()
+				result  = GenericExecutionResultMap
+				cluster = execute.Cluster{
+					Main:  GenericPeerIDs[0],
+					Peers: GenericPeerIDs[:4],
+				}
+			)
+
+			return code, uuid, result, cluster, nil
 		},
 		ExecuteFunctionBatchFunc: func(context.Context, request.ExecuteBatch) (*response.ExecuteBatch, error) {
-			// TODO: Return success by default.
-			return nil, GenericError
+			return GenericBatchExecutionResult, nil
 		},
 		ExecutionResultFunc: func(id string) (execute.ResultMap, bool) {
 			return GenericExecutionResultMap, true

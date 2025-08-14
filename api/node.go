@@ -9,7 +9,7 @@ import (
 	"github.com/blessnetwork/b7s/models/response"
 )
 
-// TODO: ExecutionFunctionBatch makes a detour from the established approach
+// NOTE: ExecutionFunctionBatch makes a detour from the established approach
 // by directly using the request/response types. Consider if
 // other handlers should do the same, bringing down REST API handlers closer
 // to their p2p counterpart, which is what REST API is trying to emulate.

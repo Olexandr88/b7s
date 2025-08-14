@@ -42,7 +42,6 @@ func (w *Worker) processWorkOrderBatch(ctx context.Context, from peer.ID, req re
 
 	for _, args := range req.Arguments {
 
-		// TODO: Fill this in.
 		er := execute.Request{
 			FunctionID: req.Template.FunctionID,
 			Method:     req.Template.Method,
