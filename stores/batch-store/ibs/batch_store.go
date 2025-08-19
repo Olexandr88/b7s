@@ -297,6 +297,35 @@ func (s *BatchStore) FindWorkItems(ctx context.Context, batchID string, chunkID 
 	return results, nil
 }
 
+func (s *BatchStore) FindChunks(ctx context.Context, batchID string, statuses ...int32) ([]*batchstore.ChunkRecord, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	if batchID == "" {
+		return nil, errors.New("batch ID is required")
+	}
+
+	lookup := make(map[int32]struct{})
+	for _, s := range statuses {
+		lookup[s] = struct{}{}
+	}
+
+	var results []*batchstore.ChunkRecord
+	for _, chunk := range s.chunks {
+
+		if len(lookup) > 0 {
+			_, ok := lookup[chunk.Status]
+			if !ok {
+				continue
+			}
+		}
+
+		results = append(results, chunk)
+	}
+
+	return results, nil
+}
+
 // func (s *BatchStore) dumpData(w io.Writer, msg string) {
 // 	s.RLock()
 // 	defer s.RUnlock()

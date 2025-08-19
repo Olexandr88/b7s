@@ -84,3 +84,35 @@ func (s *BatchStore) DeleteChunks(ctx context.Context, ids ...string) error {
 
 	return nil
 }
+
+func (s *BatchStore) FindChunks(ctx context.Context, batchID string, statuses ...int32) ([]*batchstore.ChunkRecord, error) {
+
+	if batchID == "" {
+		return nil, errors.New("batch ID is required")
+	}
+
+	query := make(map[string]any)
+	query["batch_id"] = batchID
+
+	sn := len(statuses)
+	if sn == 1 {
+		query["status"] = statuses[0]
+	} else {
+		query["status"] = map[string]any{
+			"$in": statuses,
+		}
+	}
+
+	cursor, err := s.chunks.Find(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup chunks: %w", err)
+	}
+
+	var chunks []*batchstore.ChunkRecord
+	err = cursor.All(ctx, &chunks)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode found chunks: %w", err)
+	}
+
+	return chunks, nil
+}

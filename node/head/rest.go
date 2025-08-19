@@ -10,6 +10,7 @@ import (
 	"github.com/blessnetwork/b7s/models/execute"
 	"github.com/blessnetwork/b7s/models/request"
 	"github.com/blessnetwork/b7s/models/response"
+	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
 )
 
 // ExecuteFunction can be used to start function execution. At the moment this is used by the API server to start execution on the head node.
@@ -87,6 +88,69 @@ func (h *HeadNode) PublishFunctionInstall(ctx context.Context, uri string, cid s
 	}
 
 	return nil
+}
+
+func (h *HeadNode) GetBatchResults(ctx context.Context, id string) (*response.ExecuteBatch, error) {
+
+	batch, err := h.cfg.BatchStore.GetBatch(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve batch result: %w", err)
+	}
+
+	// We will need to group work items according to the group they belong to.
+	chunks, err := h.cfg.BatchStore.FindChunks(ctx, batch.ID)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve chunks for batch: %w", err)
+	}
+
+	// Find all work items belonging to this batch.
+	items, err := h.cfg.BatchStore.FindWorkItems(ctx, batch.ID, "")
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve work items for batch: %w", err)
+	}
+
+	lookup := make(map[string]*batchstore.ChunkRecord)
+	for _, chunk := range chunks {
+		lookup[chunk.ID] = chunk
+	}
+
+	oc := make(map[string]response.NodeChunkResults)
+	for _, item := range items {
+
+		chunk, ok := lookup[item.ChunkID]
+		if !ok {
+			h.Log().Warn().Str("batch", batch.ID).Str("work_item", item.ID).Str("chunk", item.ChunkID).
+				Msg("chunk not found for work item")
+			continue
+		}
+
+		_, ok = oc[item.ChunkID]
+		if !ok {
+			oc[item.ChunkID] = response.NodeChunkResults{
+				Peer:    chunk.Worker,
+				Results: make(map[execute.RequestHash]*response.BatchFunctionResult),
+			}
+		}
+
+		hash := execute.ExecutionID(batch.CID, batch.Method, item.Arguments)
+		oc[item.ChunkID].Results[hash] = &response.BatchFunctionResult{
+			NodeResult: execute.NodeResult{
+				Result: execute.Result{Result: execute.RuntimeOutput{
+					Stdout: item.Output,
+				}},
+			},
+			FunctionInvocation: execute.FunctionInvocation(batch.CID, batch.Method),
+			Arguments:          item.Arguments,
+		}
+	}
+
+	out := &response.ExecuteBatch{
+		RequestID: id,
+		Code:      codes.OK, // TODO: Be more precise in this, not all executions are "OK".
+		Chunks:    oc,
+	}
+
+	return out, nil
 }
 
 // createInstallMessageFromURI creates a MsgInstallFunction from the given URI.

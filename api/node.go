@@ -17,6 +17,7 @@ import (
 type Node interface {
 	ExecuteFunction(ctx context.Context, req execute.Request, subgroup string) (code codes.Code, requestID string, results execute.ResultMap, peers execute.Cluster, err error)
 	ExecuteFunctionBatch(ctx context.Context, req request.ExecuteBatch) (*response.ExecuteBatch, error)
+	GetBatchResults(ctx context.Context, id string) (*response.ExecuteBatch, error)
 	ExecutionResult(id string) (execute.ResultMap, bool)
 	PublishFunctionInstall(ctx context.Context, uri string, cid string, subgroup string) error
 }

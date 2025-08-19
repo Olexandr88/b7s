@@ -36,6 +36,7 @@ type ChunkStore interface {
 	UpdateChunk(ctx context.Context, rec *ChunkRecord) error
 	UpdateChunkStatus(ctx context.Context, status int32, ids ...string) error
 	DeleteChunks(ctx context.Context, ids ...string) error
+	FindChunks(ctx context.Context, batchID string, statuses ...int32) ([]*ChunkRecord, error)
 }
 
 type WorkItemStore interface {
