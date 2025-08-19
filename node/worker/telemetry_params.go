@@ -6,13 +6,16 @@ import (
 
 // Tracing span names.
 const (
-	spanWorkOrder = "WorkOrder"
+	spanWorkOrder      = "WorkOrder"
+	spanWorkOrderBatch = "WorkOrderBatch"
+	spanExecute        = "Execute"
 )
 
 var (
 	rollCallsSeenMetric    = []string{"node", "rollcalls", "seen"}
 	rollCallsAppliedMetric = []string{"node", "rollcalls", "applied"}
 	workOrderMetric        = []string{"node", "workorders"}
+	workOrderBatchesMetric = []string{"node", "workorder_batches"}
 )
 
 var Counters = []prometheus.CounterDefinition{

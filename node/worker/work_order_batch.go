@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-metrics"
 	"github.com/libp2p/go-libp2p/core/peer"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/blessnetwork/b7s/models/execute"
 	"github.com/blessnetwork/b7s/models/request"
 	"github.com/blessnetwork/b7s/models/response"
+	"github.com/blessnetwork/b7s/telemetry/b7ssemconv"
 )
 
 // TODO: Perhaps move this and keep it in a single place.
@@ -21,6 +24,8 @@ type ChunkResult struct {
 }
 
 func (w *Worker) processWorkOrderBatch(ctx context.Context, from peer.ID, req request.WorkOrderBatch) error {
+
+	w.Metrics().IncrCounterWithLabels(workOrderBatchesMetric, 1, []metrics.Label{{Name: "function", Value: req.Template.FunctionID}})
 
 	requestID := req.RequestID
 	chunkID := req.ChunkID
@@ -35,6 +40,14 @@ func (w *Worker) processWorkOrderBatch(ctx context.Context, from peer.ID, req re
 		Int("variants", len(req.Arguments)).
 		Uint("concurrency", req.ConcurrencyLimit).
 		Msg("received a batch work order")
+
+	ctx, span := w.Tracer().Start(ctx, spanWorkOrderBatch, trace.WithAttributes(
+		b7ssemconv.FunctionCID.String(req.Template.FunctionID),
+		b7ssemconv.FunctionMethod.String(req.Template.Method),
+		b7ssemconv.ExecutionNodeCount.Int(req.Template.Config.NodeCount),
+		b7ssemconv.ExecutionRequestID.String(requestID),
+	))
+	defer span.End()
 
 	// TODO: Handle parallelism
 
