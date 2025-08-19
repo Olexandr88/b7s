@@ -39,6 +39,7 @@ func (e ExecuteBatch) RollCall(id string) *RollCall {
 		RequestID:   id,
 		FunctionID:  e.Template.FunctionID,
 		Attributes:  e.Template.Config.Attributes,
+		Batch:       true,
 	}
 }
 

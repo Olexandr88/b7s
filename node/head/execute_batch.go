@@ -86,8 +86,7 @@ func (h *HeadNode) executeBatch(
 	log.Info().Msg("processing batch execution request")
 
 	// Phase 1. - Issue roll call to nodes.
-
-	rc := rollCallRequest(req.Template.FunctionID, requestID, 0, req.Template.Config.Attributes, true)
+	rc := req.RollCall(requestID)
 
 	rctx, cancel := context.WithTimeout(ctx, h.cfg.ExecutionTimeout)
 	defer cancel()

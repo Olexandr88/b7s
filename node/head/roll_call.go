@@ -8,12 +8,10 @@ import (
 	"github.com/hashicorp/go-metrics"
 	"github.com/libp2p/go-libp2p/core/peer"
 
-	"github.com/blessnetwork/b7s/consensus"
 	cons "github.com/blessnetwork/b7s/consensus"
 	"github.com/blessnetwork/b7s/consensus/pbft"
 	"github.com/blessnetwork/b7s/models/bls"
 	"github.com/blessnetwork/b7s/models/codes"
-	"github.com/blessnetwork/b7s/models/execute"
 	"github.com/blessnetwork/b7s/models/request"
 	"github.com/blessnetwork/b7s/models/response"
 )
@@ -161,16 +159,4 @@ func (h *HeadNode) processRollCallResponse(ctx context.Context, from peer.ID, re
 	h.rollCall.add(res.RequestID, rres)
 
 	return nil
-}
-
-// TODO: RollCall must have trace info propagated.
-func rollCallRequest(function string, id string, c consensus.Type, attributes *execute.Attributes, batch bool) *request.RollCall {
-	return &request.RollCall{
-		// BaseMessage: bls.BaseMessage{TraceInfo: req.TraceInfo},
-		RequestID:  id,
-		FunctionID: function,
-		Consensus:  c,
-		Attributes: attributes,
-		Batch:      batch,
-	}
 }
