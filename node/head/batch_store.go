@@ -69,7 +69,7 @@ func (h *HeadNode) createChunks(batchID string, assignments map[peer.ID]*request
 		chunks[i] = &batchstore.ChunkRecord{
 			ID:        chunk.ChunkID,
 			BatchID:   batchID,
-			Worker:    peer,
+			Worker:    peer.String(),
 			Status:    batchstore.StatusCreated,
 			CreatedAt: ts,
 		}

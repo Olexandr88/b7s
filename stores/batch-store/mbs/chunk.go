@@ -97,7 +97,7 @@ func (s *BatchStore) FindChunks(ctx context.Context, batchID string, statuses ..
 	sn := len(statuses)
 	if sn == 1 {
 		query["status"] = statuses[0]
-	} else {
+	} else if sn > 1 {
 		query["status"] = map[string]any{
 			"$in": statuses,
 		}

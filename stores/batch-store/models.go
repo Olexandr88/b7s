@@ -4,10 +4,7 @@ import (
 	"time"
 
 	"github.com/blessnetwork/b7s/models/execute"
-	"github.com/libp2p/go-libp2p/core/peer"
 )
-
-// TODO: Consider: ID string to UUID
 
 type ExecuteBatchRecord struct {
 	ID          string    `bson:"id,omitempty"`
@@ -26,7 +23,7 @@ type Config = execute.Config
 type ChunkRecord struct {
 	ID        string    `bson:"id,omitempty"`
 	BatchID   string    `bson:"batch_id,omitempty"`
-	Worker    peer.ID   `bson:"worker,omitempty"`
+	Worker    string    `bson:"worker,omitempty"`
 	Status    int32     `bson:"status"`
 	CreatedAt time.Time `bson:"created_at,omitempty"`
 	UpdatedAt time.Time `bson:"updated_at,omitempty"`

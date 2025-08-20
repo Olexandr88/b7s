@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/peer"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/blessnetwork/b7s/models/bls"
 	"github.com/blessnetwork/b7s/models/codes"
@@ -13,6 +14,7 @@ import (
 	"github.com/blessnetwork/b7s/models/request"
 	"github.com/blessnetwork/b7s/models/response"
 	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
+	"github.com/blessnetwork/b7s/telemetry/b7ssemconv"
 )
 
 type ExecutionBatchAssignments map[peer.ID]*request.WorkOrderBatch
@@ -76,7 +78,16 @@ func (h *HeadNode) executeBatch(
 	error,
 ) {
 
-	// TODO: Metrics and tracing
+	// TODO: Metrics
+	ctx, span := h.Tracer().Start(ctx, spanExecute,
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			b7ssemconv.FunctionCID.String(req.Template.FunctionID),
+			b7ssemconv.FunctionMethod.String(req.Template.Method),
+			b7ssemconv.ExecutionNodeCount.Int(req.Template.Config.NodeCount),
+			b7ssemconv.ExecutionRequestID.String(requestID)),
+	)
+	defer span.End()
 
 	log := h.Log().With().
 		Str("request", requestID).
@@ -270,6 +281,7 @@ func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore
 	h.Log().Info().Str("batch", requestID).Int("pending", len(pending)).
 		Msg("requeuing batch work items")
 
+	// TODO: We should no longer use the original number of nodes - we might only be processing 2% of work items, no reason to request the original N number of workers.
 	_, err = h.executeBatch(ctx, requestID, batchRecordToRequest(batch, pending))
 	if err != nil {
 		return fmt.Errorf("could not continue batch execution: %w", err)

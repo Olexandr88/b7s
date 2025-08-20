@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"github.com/libp2p/go-libp2p/core/peer"
+
 	"github.com/blessnetwork/b7s/models/bls"
 	"github.com/blessnetwork/b7s/models/codes"
 	"github.com/blessnetwork/b7s/models/execute"
@@ -126,8 +128,14 @@ func (h *HeadNode) GetBatchResults(ctx context.Context, id string) (*response.Ex
 
 		_, ok = oc[item.ChunkID]
 		if !ok {
+
+			id, err := peer.Decode(chunk.Worker)
+			if err != nil {
+				return nil, fmt.Errorf("invalid peer ID found (id: %s): %w", chunk.Worker, err)
+			}
+
 			oc[item.ChunkID] = response.NodeChunkResults{
-				Peer:    chunk.Worker,
+				Peer:    id,
 				Results: make(map[execute.RequestHash]*response.BatchFunctionResult),
 			}
 		}

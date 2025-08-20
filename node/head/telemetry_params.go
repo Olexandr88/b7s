@@ -6,7 +6,8 @@ import (
 
 // Tracing span names.
 const (
-	spanExecute = "Execute"
+	spanExecute      = "Execute"
+	spanExecuteBatch = "ExecuteBatch"
 )
 
 var (

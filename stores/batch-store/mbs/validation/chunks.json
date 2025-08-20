@@ -3,14 +3,14 @@
         "bsonType": "object",
         "required": [
             "id",
-            "request_id"
+            "batch_id"
         ],
         "properties": {
             "id": {
                 "bsonType": "string",
                 "description": "chunk ID"
             },
-            "request_id": {
+            "batch_id": {
                 "bsonType": "string",
                 "description": "ID of the parent execution request"
             },
