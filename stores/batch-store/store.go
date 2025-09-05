@@ -44,6 +44,7 @@ type WorkItemStore interface {
 	GetWorkItem(ctx context.Context, id string) (*WorkItemRecord, error)
 	UpdateWorkItem(ctx context.Context, rec *WorkItemRecord) error
 	UpdateWorkItemStatus(ctx context.Context, status int32, ids ...string) error
+	UpdateWorkItemsOutput(ctx context.Context, statuses map[string]WorkItemStatus) error
 	DeleteWorkItems(ctx context.Context, ids ...string) error
 	AssignWorkItems(ctx context.Context, chunkID string, ids ...string) error
 	FindWorkItems(ctx context.Context, batchID string, chunkID string, statuses ...int32) ([]*WorkItemRecord, error)

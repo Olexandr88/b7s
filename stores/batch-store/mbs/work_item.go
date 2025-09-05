@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
 )
@@ -71,6 +73,36 @@ func (s *BatchStore) UpdateWorkItemStatus(ctx context.Context, status int32, ids
 	)
 	if err != nil {
 		return fmt.Errorf("could not update work item: %w", err)
+	}
+
+	return nil
+}
+
+func (s *BatchStore) UpdateWorkItemsOutput(ctx context.Context, statuses map[string]batchstore.WorkItemStatus) error {
+
+	ts := time.Now().UTC()
+
+	var models []mongo.WriteModel
+
+	for id, s := range statuses {
+
+		update := mongo.NewUpdateOneModel().
+			SetFilter(bson.M{"id": id}).
+			SetUpdate(bson.M{
+				"$set": bson.M{
+					"output":     s.Output,
+					"status":     s.Status,
+					"updated_at": ts,
+				}})
+
+		models = append(models, update)
+	}
+
+	opts := options.BulkWrite().SetOrdered(false)
+
+	_, err := s.items.BulkWrite(ctx, models, opts)
+	if err != nil {
+		return fmt.Errorf("could not update work items: %w", err)
 	}
 
 	return nil

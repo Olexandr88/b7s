@@ -154,7 +154,8 @@ func (h *HeadNode) markCompletedChunks(batchID string, sizes map[string]int, chu
 
 	// Group resulting work items by status so we can update them in batches.
 	completed := make([]string, 0, len(chunkResults))
-	statuses := make(map[batchstore.Status][]string)
+	//statuses := make(map[batchstore.Status][]string)
+	statuses := make(map[string]batchstore.WorkItemStatus)
 	for chunkID, res := range chunkResults {
 
 		for itemID, itemResult := range res.Results {
@@ -169,12 +170,10 @@ func (h *HeadNode) markCompletedChunks(batchID string, sizes map[string]int, chu
 				Int("exit_code", itemResult.Result.Result.ExitCode).
 				Msg("processing chunk work item")
 
-			_, ok := statuses[status]
-			if !ok {
-				statuses[status] = make([]string, 0, 10)
+			statuses[workItemID(batchID, string(itemID))] = batchstore.WorkItemStatus{
+				Status: status,
+				Output: itemResult.Result.Result.Stdout,
 			}
-
-			statuses[status] = append(statuses[status], workItemID(batchID, string(itemID)))
 		}
 
 		// If we have all of the results - mark the chunk as done.
@@ -185,27 +184,19 @@ func (h *HeadNode) markCompletedChunks(batchID string, sizes map[string]int, chu
 
 	var merr *multierror.Error
 
-	for status, ids := range statuses {
+	h.Log().Info().
+		Int("count", len(statuses)).
+		Msg("updating work item status in batch store")
 
-		log := h.Log().
-			With().
-			Str("batch", batchID).
-			Int32("status", int32(status)).
-			Strs("items", ids).
-			Logger()
+	err := h.cfg.BatchStore.UpdateWorkItemsOutput(context.TODO(), statuses)
+	if err != nil {
+		// Logging AND returning the message here but extra context is useful
+		h.Log().Error().Err(err).Msg("could not update work item status")
 
-		log.Debug().Msg("updating work item status in batch store")
-
-		err := h.cfg.BatchStore.UpdateWorkItemStatus(context.TODO(), int32(status), ids...)
-		if err != nil {
-			// Logging AND returning the message here but extra context is useful
-			log.Error().Err(err).Msg("could not update work item status")
-
-			merr = multierror.Append(merr, fmt.Errorf("could not update work item status: %w", err))
-		}
+		merr = multierror.Append(merr, fmt.Errorf("could not update work item status: %w", err))
 	}
 
-	err := h.cfg.BatchStore.UpdateChunkStatus(context.TODO(), batchstore.StatusDone, completed...)
+	err = h.cfg.BatchStore.UpdateChunkStatus(context.TODO(), batchstore.StatusDone, completed...)
 	if err != nil {
 		h.Log().Error().
 			Err(err).

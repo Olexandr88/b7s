@@ -237,6 +237,25 @@ func (s *BatchStore) UpdateWorkItemStatus(ctx context.Context, status int32, ids
 	return nil
 }
 
+func (s *BatchStore) UpdateWorkItemsOutput(ctx context.Context, statuses map[string]batchstore.WorkItemStatus) error {
+
+	s.Lock()
+	defer s.Unlock()
+
+	for id, status := range statuses {
+
+		_, ok := s.items[id]
+		if !ok {
+			return errors.New("work item not found")
+		}
+
+		s.items[id].Status = int32(status.Status)
+		s.items[id].Output = status.Output
+	}
+
+	return nil
+}
+
 func (s *BatchStore) DeleteWorkItems(ctx context.Context, ids ...string) error {
 	s.Lock()
 	defer s.Unlock()

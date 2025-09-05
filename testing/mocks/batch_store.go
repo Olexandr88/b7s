@@ -23,14 +23,16 @@ type BatchStore struct {
 	UpdateChunkFunc       func(context.Context, *batchstore.ChunkRecord) error
 	UpdateChunkStatusFunc func(context.Context, int32, ...string) error
 	DeleteChunksFunc      func(context.Context, ...string) error
+	FindChunksFunc        func(context.Context, string, ...int32) ([]*batchstore.ChunkRecord, error)
 
-	CreateWorkItemsFunc      func(context.Context, ...*batchstore.WorkItemRecord) error
-	GetWorkItemFunc          func(context.Context, string) (*batchstore.WorkItemRecord, error)
-	UpdateWorkItemFunc       func(context.Context, *batchstore.WorkItemRecord) error
-	UpdateWorkItemStatusFunc func(context.Context, int32, ...string) error
-	DeleteWorkItemsFunc      func(context.Context, ...string) error
-	AssignWorkItemsFunc      func(context.Context, string, ...string) error
-	FindWorkItemsFunc        func(context.Context, string, string, ...int32) ([]*batchstore.WorkItemRecord, error)
+	CreateWorkItemsFunc       func(context.Context, ...*batchstore.WorkItemRecord) error
+	GetWorkItemFunc           func(context.Context, string) (*batchstore.WorkItemRecord, error)
+	UpdateWorkItemFunc        func(context.Context, *batchstore.WorkItemRecord) error
+	UpdateWorkItemStatusFunc  func(context.Context, int32, ...string) error
+	UpdateWorkItemsOutputFunc func(context.Context, map[string]batchstore.WorkItemStatus) error
+	DeleteWorkItemsFunc       func(context.Context, ...string) error
+	AssignWorkItemsFunc       func(context.Context, string, ...string) error
+	FindWorkItemsFunc         func(context.Context, string, string, ...int32) ([]*batchstore.WorkItemRecord, error)
 }
 
 // TODO: Add actual types to be returned, not nils
@@ -76,6 +78,9 @@ func BaselineMockStore(t *testing.T) *BatchStore {
 		DeleteChunksFunc: func(context.Context, ...string) error {
 			return nil
 		},
+		FindChunksFunc: func(context.Context, string, ...int32) ([]*batchstore.ChunkRecord, error) {
+			return nil, nil
+		},
 
 		CreateWorkItemsFunc: func(context.Context, ...*batchstore.WorkItemRecord) error {
 			return nil
@@ -87,6 +92,9 @@ func BaselineMockStore(t *testing.T) *BatchStore {
 			return nil
 		},
 		UpdateWorkItemStatusFunc: func(context.Context, int32, ...string) error {
+			return nil
+		},
+		UpdateWorkItemsOutputFunc: func(context.Context, map[string]batchstore.WorkItemStatus) error {
 			return nil
 		},
 		DeleteWorkItemsFunc: func(context.Context, ...string) error {
@@ -149,6 +157,10 @@ func (m *BatchStore) DeleteChunks(ctx context.Context, ids ...string) error {
 	return m.DeleteChunksFunc(ctx, ids...)
 }
 
+func (m *BatchStore) FindChunks(ctx context.Context, batchID string, statuses ...int32) ([]*batchstore.ChunkRecord, error) {
+	return m.FindChunksFunc(ctx, batchID, statuses...)
+}
+
 func (m *BatchStore) CreateWorkItems(ctx context.Context, rec ...*batchstore.WorkItemRecord) error {
 	return m.CreateWorkItemsFunc(ctx, rec...)
 }
@@ -163,6 +175,10 @@ func (m *BatchStore) UpdateWorkItem(ctx context.Context, rec *batchstore.WorkIte
 
 func (m *BatchStore) UpdateWorkItemStatus(ctx context.Context, status int32, ids ...string) error {
 	return m.UpdateWorkItemStatusFunc(ctx, status, ids...)
+}
+
+func (m *BatchStore) UpdateWorkItemsOutput(ctx context.Context, statuses map[string]batchstore.WorkItemStatus) error {
+	return m.UpdateWorkItemsOutputFunc(ctx, statuses)
 }
 
 func (m *BatchStore) DeleteWorkItems(ctx context.Context, ids ...string) error {
