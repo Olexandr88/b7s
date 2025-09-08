@@ -129,7 +129,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchExecutionResponse'
+                $ref: '#/components/schemas/BatchExecutionResult'
         '400':
           description: Invalid request
         '500':
@@ -599,6 +599,15 @@ components:
           $ref: '#/components/schemas/ExecutionConfig'
 
     BatchExecutionResponse:
+      type: object
+      properties:
+        request_id:
+          description: ID of the Execution Request
+          type: string
+          example: b6fbbc5e-1d16-4ea9-b557-51f4a6ab565c
+          x-go-type-skip-optional-pointer: true
+
+    BatchExecutionResult:
       type: object
       properties:
         code:

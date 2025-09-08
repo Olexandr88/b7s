@@ -594,7 +594,7 @@ func (r ExecuteFunctionBatchResponse) StatusCode() int {
 type BatchExecutionResultResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *BatchExecutionResponse
+	JSON200      *BatchExecutionResult
 }
 
 // Status returns HTTPResponse.Status
@@ -840,7 +840,7 @@ func ParseBatchExecutionResultResponse(rsp *http.Response) (*BatchExecutionResul
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest BatchExecutionResponse
+		var dest BatchExecutionResult
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

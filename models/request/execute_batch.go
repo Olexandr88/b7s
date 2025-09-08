@@ -22,7 +22,6 @@ func (e ExecuteBatch) Response(c codes.Code, id string) *response.ExecuteBatch {
 	return &response.ExecuteBatch{
 		BaseMessage: bls.BaseMessage{TraceInfo: e.TraceInfo},
 		RequestID:   id,
-		Code:        c,
 	}
 }
 

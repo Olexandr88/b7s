@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"go.opentelemetry.io/otel/trace"
 
@@ -50,14 +51,14 @@ func (h *HeadNode) processExecuteBatch(ctx context.Context, from peer.ID, req re
 	// - at certain point they should be reset and no longer be considered "in progress".
 
 	// TODO: When a work order batch response is received out of band, status should be updated too.
-	results, err := h.executeBatch(ctx, requestID, req)
+	err = h.startBatchExecution(ctx, requestID, req)
 	if err != nil {
 		return fmt.Errorf("could not execute batch request: %w", err)
 	}
 
-	log.Info().Any("results", results).Msg("received batch responses")
+	log.Info().Msg("started batch execution")
 
-	res := req.Response(codes.OK, requestID).WithResults(results)
+	res := req.Response(codes.OK, requestID)
 
 	err = h.Send(ctx, from, res)
 	if err != nil {
@@ -69,14 +70,11 @@ func (h *HeadNode) processExecuteBatch(ctx context.Context, from peer.ID, req re
 
 type batchResults map[string]response.NodeChunkResults
 
-func (h *HeadNode) executeBatch(
+func (h *HeadNode) startBatchExecution(
 	ctx context.Context,
 	requestID string,
 	req request.ExecuteBatch,
-) (
-	batchResults,
-	error,
-) {
+) error {
 
 	// TODO: Metrics
 	ctx, span := h.Tracer().Start(ctx, spanExecute,
@@ -105,7 +103,7 @@ func (h *HeadNode) executeBatch(
 	// node count is -1 - we want all the nodes that want to work.
 	peers, err := h.executeRollCall(rctx, rc, req.Topic, req.Template.Config.NodeCount)
 	if err != nil {
-		return nil, fmt.Errorf("could not execute roll call: %w", err)
+		return fmt.Errorf("could not execute roll call: %w", err)
 	}
 
 	log.Debug().
@@ -119,7 +117,7 @@ func (h *HeadNode) executeBatch(
 	// 2. update work items to contain chunk information to which they are assigned to.
 	err = h.saveChunkInfo(requestID, assignments)
 	if err != nil {
-		return nil, fmt.Errorf("could not save chunks: %w", err)
+		return fmt.Errorf("could not save chunks: %w", err)
 	}
 
 	// Useful but ugly, won't use it in normal operation unless it proves to be required.
@@ -131,7 +129,7 @@ func (h *HeadNode) executeBatch(
 
 		var sendErr *batchSendError
 		if !errors.As(err, &sendErr) {
-			return nil, fmt.Errorf("could not send work order batch: %w", err)
+			return fmt.Errorf("could not send work order batch: %w", err)
 		}
 
 		log.Warn().
@@ -143,57 +141,10 @@ func (h *HeadNode) executeBatch(
 
 	err = h.markStartedChunks(requestID, assignments, failedDeliveries)
 	if err != nil {
-		return nil, fmt.Errorf("could not mark chunks as in-progress: %w", err)
+		return fmt.Errorf("could not mark chunks as in-progress: %w", err)
 	}
 
-	// Wait for results.
-
-	assignedWorkers := mapKeys(assignments)
-
-	wctx, cancel := context.WithTimeout(ctx, h.cfg.ExecutionTimeout)
-	defer cancel()
-
-	batchResults := gatherPeerMessages(
-		wctx,
-		assignedWorkers,
-		func(id peer.ID) string {
-			return peerChunkKey(requestID, assignments[id].ChunkID, id)
-		},
-		h.workOrderBatchResponses,
-	)
-
-	chunkResults := make(map[string]response.NodeChunkResults)
-	for peer, res := range batchResults {
-
-		sr := response.NodeChunkResults{
-			Peer:    peer,
-			Results: res.Results,
-		}
-
-		assignment, ok := assignments[peer]
-		// Should never happen.
-		if !ok {
-			return nil, fmt.Errorf("found a batch result for a peer without assignment (request: %v, peer: %v, reported chunk id: %v)",
-				requestID,
-				peer.String(),
-				res.ChunkID)
-		}
-
-		chunkResults[assignment.ChunkID] = sr
-	}
-
-	// Get the expected number of results so we can mark a chunk as complete if we have all of its results.
-	chunkSizes := make(map[string]int)
-	for _, chunk := range assignments {
-		chunkSizes[chunk.ChunkID] = len(chunk.Arguments)
-	}
-
-	err = h.markCompletedChunks(requestID, chunkSizes, chunkResults)
-	if err != nil {
-		return nil, fmt.Errorf("could not mark chunks as complete: %w", err)
-	}
-
-	return chunkResults, nil
+	return nil
 }
 
 // generic helpers to get keys from a map. No locking or anything.
@@ -208,8 +159,7 @@ func mapKeys[K comparable, V any](m map[K]V) []K {
 }
 
 // func logAssignments(log *zerolog.Logger, assignments map[peer.ID]*request.WorkOrderBatch) {
-//
-// 	for peer, assignment := range assignments {
+//z
 // 		log.Debug().
 // 			Stringer("peer", peer).
 // 			Int("count", len(assignment.Arguments)).
@@ -282,7 +232,7 @@ func (h *HeadNode) continueBatchExecution(ctx context.Context, batch *batchstore
 		Msg("requeuing batch work items")
 
 	// TODO: We should no longer use the original number of nodes - we might only be processing 2% of work items, no reason to request the original N number of workers.
-	_, err = h.executeBatch(ctx, requestID, batchRecordToRequest(batch, pending))
+	err = h.startBatchExecution(ctx, requestID, batchRecordToRequest(batch, pending))
 	if err != nil {
 		return fmt.Errorf("could not continue batch execution: %w", err)
 	}
@@ -318,4 +268,88 @@ func filterWorkItems(items []*batchstore.WorkItemRecord, threshold uint32) ([]*b
 	}
 
 	return pending, permaFailed
+}
+
+func (h *HeadNode) processWorkOrderBatchResponse(ctx context.Context, from peer.ID, res response.WorkOrderBatch) error {
+
+	log := h.Log().With().
+		Stringer("from", from).
+		Str("batch", res.RequestID).
+		Str("chunk", res.ChunkID).
+		Logger()
+
+	log.Debug().Msg("received work order batch response")
+
+	// TODO: Remove this as we're doing it out of band.
+	key := peerChunkKey(res.RequestID, res.ChunkID, from)
+	h.workOrderBatchResponses.Set(key, res)
+
+	// Perhaps on batch resume, node should first check the batch response cache and update the status for those work items.
+
+	chunk, err := h.cfg.BatchStore.GetChunk(ctx, res.ChunkID)
+	if err != nil {
+		return fmt.Errorf("no matching chunk found (batch: %v, chunk: %v, peer: %v)", res.RequestID, res.ChunkID, from.String())
+	}
+
+	if chunk.Worker != from.String() {
+		return fmt.Errorf("unexpected worker returned result (chunk: %v, expected: %v, got: %v)", res.RequestID, chunk.Worker, from.String())
+	}
+
+	// We'll convert this into a map as it's a more usable format for what we need.
+	statuses := make(map[string]batchstore.WorkItemStatus)
+	for itemID, itemResult := range res.Results {
+
+		status := exitCodeToBatchStoreStatus(itemResult.Result.Result.ExitCode)
+
+		log.Debug().
+			Str("item_id", string(itemID)).
+			Int32("status", int32(status)).
+			Int("exit_code", itemResult.Result.Result.ExitCode).
+			Msg("processing chunk work item")
+
+		statuses[workItemID(chunk.BatchID, string(itemID))] = batchstore.WorkItemStatus{
+			Status: status,
+			Output: itemResult.Result.Result.Stdout,
+		}
+	}
+
+	// Now that we have a map - we can use it for lookup to make sure all items we have are eligible to be updated.
+	// For example - all work items this node returned actually do belong to this chunk.
+	items, err := h.cfg.BatchStore.FindWorkItems(ctx, "", res.ChunkID, batchstore.StatusInProgress)
+	if err != nil {
+		return fmt.Errorf("could not retrieve chunk work items (chunk: %v): %w", res.ChunkID, err)
+	}
+
+	for _, item := range items {
+		if res.ChunkID != item.ChunkID {
+			return fmt.Errorf("item received from worker belongs to a different chunk (item: %v received_chunk: %v, actual: %v)",
+				item.ID, res.ChunkID, item.ChunkID)
+		}
+	}
+
+	h.Log().Info().
+		Int("count", len(statuses)).
+		Msg("updating work item status in batch store")
+
+	var merr *multierror.Error
+
+	err = h.cfg.BatchStore.UpdateWorkItemsOutput(ctx, statuses)
+	if err != nil {
+		// Logging AND returning the message here but extra context is useful
+		log.Error().Err(err).Msg("could not update work item status")
+
+		merr = multierror.Append(merr, fmt.Errorf("could not update work item status: %w", err))
+	}
+
+	if len(items) == len(statuses) {
+		err = h.cfg.BatchStore.UpdateChunkStatus(ctx, batchstore.StatusDone, res.ChunkID)
+		if err != nil {
+			// Logging AND returning the message here but extra context is useful
+			log.Error().Err(err).Msg("could not update chunk status")
+
+			merr = multierror.Append(merr, fmt.Errorf("could not update chunk status: %w", err))
+		}
+	}
+
+	return merr.ErrorOrNil()
 }

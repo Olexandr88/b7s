@@ -20,7 +20,7 @@ func (a *API) BatchExecutionResult(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("could not retrieve batch execution result: %w", err))
 	}
 
-	out := BatchExecutionResponse{
+	out := BatchExecutionResult{
 		RequestId: res.RequestID,
 		Code:      res.Code.String(),
 		Message:   res.ErrorMessage,

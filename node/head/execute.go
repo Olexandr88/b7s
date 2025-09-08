@@ -218,23 +218,6 @@ func (h *HeadNode) processWorkOrderResponse(ctx context.Context, from peer.ID, r
 	return nil
 }
 
-func (h *HeadNode) processWorkOrderBatchResponse(ctx context.Context, from peer.ID, res response.WorkOrderBatch) error {
-
-	h.Log().Debug().
-		Stringer("from", from).
-		Str("request", res.RequestID).
-		Str("chunk", res.ChunkID).
-		Msg("received work order batch response")
-
-	key := peerChunkKey(res.RequestID, res.ChunkID, from)
-	h.workOrderBatchResponses.Set(key, res)
-
-	// TODO: If batch execution is not currently ongoing, handle it out of band (update DB and all of that).
-	// Perhaps on batch resume, node should first check the batch response cache and update the status for those work items.
-
-	return nil
-}
-
 func peerChunkKey(requestID string, _ string, peer peer.ID) string {
 	return requestID + "/" + peer.String()
 }

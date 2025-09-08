@@ -28,7 +28,7 @@ func (h *HeadNode) ExecuteFunction(ctx context.Context, req execute.Request, sub
 	return code, requestID, results, cluster, nil
 }
 
-func (h *HeadNode) ExecuteFunctionBatch(ctx context.Context, req request.ExecuteBatch) (*response.ExecuteBatch, error) {
+func (h *HeadNode) StartFunctionBatchExecution(ctx context.Context, req request.ExecuteBatch) (string, error) {
 
 	requestID := newRequestID()
 
@@ -42,20 +42,17 @@ func (h *HeadNode) ExecuteFunctionBatch(ctx context.Context, req request.Execute
 	// Persist batch and work items.
 	err := h.saveBatch(requestID, req)
 	if err != nil {
-		return nil, fmt.Errorf("could not save batch request: %w", err)
+		return "", fmt.Errorf("could not save batch request: %w", err)
 	}
 
-	results, err := h.executeBatch(ctx, requestID, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not execute batch request: %w", err)
-	}
+	go func() {
+		err := h.startBatchExecution(context.Background(), requestID, req)
+		if err != nil {
+			h.Log().Error().Err(err).Str("batch", requestID).Msg("could not execute batch")
+		}
+	}()
 
-	log.Info().Any("results", results).Msg("received batch responses")
-
-	// TODO: Add actual status code.
-	res := req.Response(codes.OK, requestID).WithResults(results)
-
-	return res, nil
+	return requestID, nil
 }
 
 // ExecutionResult fetches the execution result from the node cache.
@@ -154,8 +151,6 @@ func (h *HeadNode) GetBatchResults(ctx context.Context, id string) (*response.Ex
 
 	out := &response.ExecuteBatch{
 		RequestID: id,
-		Code:      codes.OK, // TODO: Be more precise in this, not all executions are "OK".
-		Chunks:    oc,
 	}
 
 	return out, nil
