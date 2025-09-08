@@ -151,6 +151,8 @@ func (h *HeadNode) GetBatchResults(ctx context.Context, id string) (*response.Ex
 
 	out := &response.ExecuteBatch{
 		RequestID: id,
+		Code:      codes.OK, // TODO: Be more precise in this, not all executions are "OK".
+		Chunks:    oc,
 	}
 
 	return out, nil
