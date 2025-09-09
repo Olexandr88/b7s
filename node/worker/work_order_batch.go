@@ -15,14 +15,6 @@ import (
 	"github.com/blessnetwork/b7s/telemetry/b7ssemconv"
 )
 
-// TODO: Perhaps move this and keep it in a single place.
-type ChunkResult struct {
-	FunctionInvocation string
-	Arguments          []string
-	Result             execute.Result
-	Metadata           any
-}
-
 func (w *Worker) processWorkOrderBatch(ctx context.Context, from peer.ID, req request.WorkOrderBatch) error {
 
 	w.Metrics().IncrCounterWithLabels(workOrderBatchesMetric, 1, []metrics.Label{{Name: "function", Value: req.Template.FunctionID}})
@@ -49,7 +41,7 @@ func (w *Worker) processWorkOrderBatch(ctx context.Context, from peer.ID, req re
 	))
 	defer span.End()
 
-	// TODO: Handle parallelism
+	// NOTE: We might want to execute these in parallel in the future
 
 	results := make(map[execute.RequestHash]*response.BatchFunctionResult)
 

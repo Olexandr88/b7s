@@ -21,10 +21,9 @@ type HeadNode struct {
 
 	cfg Config
 
-	rollCall                *rollCallQueue
-	consensusResponses      *waitmap.WaitMap[string, response.FormCluster]
-	workOrderResponses      *waitmap.WaitMap[string, execute.NodeResult]
-	workOrderBatchResponses *waitmap.WaitMap[string, response.WorkOrderBatch]
+	rollCall           *rollCallQueue
+	consensusResponses *waitmap.WaitMap[string, response.FormCluster]
+	workOrderResponses *waitmap.WaitMap[string, execute.NodeResult]
 }
 
 func New(core node.Core, options ...Option) (*HeadNode, error) {
@@ -44,10 +43,9 @@ func New(core node.Core, options ...Option) (*HeadNode, error) {
 		Core: core,
 		cfg:  cfg,
 
-		rollCall:                newQueue(rollCallQueueBufferSize),
-		consensusResponses:      waitmap.New[string, response.FormCluster](0),
-		workOrderResponses:      waitmap.New[string, execute.NodeResult](executionResultCacheSize),
-		workOrderBatchResponses: waitmap.New[string, response.WorkOrderBatch](executionResultCacheSize),
+		rollCall:           newQueue(rollCallQueueBufferSize),
+		consensusResponses: waitmap.New[string, response.FormCluster](0),
+		workOrderResponses: waitmap.New[string, execute.NodeResult](executionResultCacheSize),
 	}
 
 	head.Metrics().SetGaugeWithLabels(node.NodeInfoMetric, 1,
@@ -62,8 +60,6 @@ func New(core node.Core, options ...Option) (*HeadNode, error) {
 
 func (h *HeadNode) Run(ctx context.Context) error {
 
-	// TODO: Add a synchronous first loop or something like that so we can fail early.
-	// TODO: Re-read this.
 	go func(ctx context.Context) {
 
 		// Not a perfect solution, but the simplest one - wait a little while
@@ -104,6 +100,10 @@ func (h *HeadNode) resumeUnfinishedBatches(ctx context.Context) error {
 	batches, err := h.cfg.BatchStore.FindBatches(ctx, batchstore.StatusInProgress, batchstore.StatusCreated)
 	if err != nil {
 		return fmt.Errorf("could not lookup incomplete batches: %w", err)
+	}
+
+	if len(batches) == 0 {
+		return nil
 	}
 
 	h.Log().Info().Int("count", len(batches)).

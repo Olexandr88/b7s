@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/blessnetwork/b7s/models/bls"
 	"github.com/blessnetwork/b7s/models/codes"
@@ -15,7 +14,6 @@ import (
 	"github.com/blessnetwork/b7s/models/request"
 	"github.com/blessnetwork/b7s/models/response"
 	batchstore "github.com/blessnetwork/b7s/stores/batch-store"
-	"github.com/blessnetwork/b7s/telemetry/b7ssemconv"
 )
 
 type ExecutionBatchAssignments map[peer.ID]*request.WorkOrderBatch
@@ -68,8 +66,6 @@ func (h *HeadNode) processExecuteBatch(ctx context.Context, from peer.ID, req re
 	return nil
 }
 
-type batchResults map[string]response.NodeChunkResults
-
 func (h *HeadNode) startBatchExecution(
 	ctx context.Context,
 	requestID string,
@@ -77,15 +73,6 @@ func (h *HeadNode) startBatchExecution(
 ) error {
 
 	// TODO: Metrics
-	ctx, span := h.Tracer().Start(ctx, spanExecute,
-		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(
-			b7ssemconv.FunctionCID.String(req.Template.FunctionID),
-			b7ssemconv.FunctionMethod.String(req.Template.Method),
-			b7ssemconv.ExecutionNodeCount.Int(req.Template.Config.NodeCount),
-			b7ssemconv.ExecutionRequestID.String(requestID)),
-	)
-	defer span.End()
 
 	log := h.Log().With().
 		Str("request", requestID).
@@ -147,19 +134,19 @@ func (h *HeadNode) startBatchExecution(
 	return nil
 }
 
-// generic helpers to get keys from a map. No locking or anything.
-func mapKeys[K comparable, V any](m map[K]V) []K {
+// // generic helpers to get keys from a map. No locking or anything.
+// func mapKeys[K comparable, V any](m map[K]V) []K {
 
-	keys := make([]K, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
+// 	keys := make([]K, 0, len(m))
+// 	for key := range m {
+// 		keys = append(keys, key)
+// 	}
 
-	return keys
-}
-
+// 	return keys
+// }
+//
 // func logAssignments(log *zerolog.Logger, assignments map[peer.ID]*request.WorkOrderBatch) {
-//z
+//
 // 		log.Debug().
 // 			Stringer("peer", peer).
 // 			Int("count", len(assignment.Arguments)).
@@ -279,10 +266,6 @@ func (h *HeadNode) processWorkOrderBatchResponse(ctx context.Context, from peer.
 		Logger()
 
 	log.Debug().Msg("received work order batch response")
-
-	// TODO: Remove this as we're doing it out of band.
-	key := peerChunkKey(res.RequestID, res.ChunkID, from)
-	h.workOrderBatchResponses.Set(key, res)
 
 	// Perhaps on batch resume, node should first check the batch response cache and update the status for those work items.
 
