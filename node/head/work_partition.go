@@ -14,8 +14,6 @@ func partitionWorkBatch(peers []peer.ID, requestID string, req request.ExecuteBa
 
 	variants := req.Arguments
 
-	// TODO: Worker information should be saved to DB.
-
 	// TODO: Do this in one go, not two maps.
 
 	// Assign arguments to a list of peers in a round robin fashion
